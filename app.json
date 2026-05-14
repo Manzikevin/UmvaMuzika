@@ -6,64 +6,45 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "umvamuzika",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#050505"
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.codeharness.umvamuzika",
       "infoPlist": {
-        "NSAppleMusicUsageDescription": "This app needs access to your library to play your offline tracks."
+        "NSAppleMusicUsageDescription": "This app needs access to your library to play your offline tracks.",
+        "UIBackgroundModes": ["audio"]
       }
     },
     "android": {
+      "package": "com.codeharness.umvamuzika",
       "permissions": [
-        "READ_EXTERNAL_STORAGE",
-        "READ_MEDIA_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-        "android.permission.ACCESS_MEDIA_LOCATION",
         "android.permission.READ_MEDIA_AUDIO",
-        "android.permission.RECORD_AUDIO",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "READ_EXTERNAL_STORAGE",
-        "READ_MEDIA_AUDIO",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-        "android.permission.ACCESS_MEDIA_LOCATION",
-        "android.permission.READ_MEDIA_AUDIO",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "android.permission.WAKE_LOCK"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#050505"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.codeharness.UmvaMuzika"
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "edgeToEdgeEnabled": true
     },
     "plugins": [
       "expo-router",
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow access to your music library.",
-          "savePhotosPermission": "Allow saving audio files.",
-          "isAccessMediaLocationEnabled": true,
-          "granularPermissions": [
-            "audio"
-          ]
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your music library.",
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save audio files.",
+          "isAccessMediaLocationEnabled": true
         }
       ],
       [
@@ -72,14 +53,9 @@
           "enableBackgroundPlayback": true
         }
       ],
-      "expo-sqlite",
       "expo-font"
     ],
-    "experiments": {
-      "typedRoutes": true
-    },
     "extra": {
-      "router": {},
       "eas": {
         "projectId": "8cb99dc1-9364-42d0-a5d0-6961c26585b5"
       }
