@@ -5,206 +5,268 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Image,
-  ScrollView,
-  Platform,
+  TextInput,
 } from "react-native";
-import { Play, MoreHorizontal, Heart } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import {
+  Search,
+  FolderDown,
+  Music2,
+  Clock,
+  ListMusic,
+  MoreVertical,
+} from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { BlurView } from "expo-blur";
+import { MotiView } from "moti";
 
-const MOCK_SONGS = [
-  {
-    id: "1",
-    title: "Flowing Spirit",
-    artist: "Geovane Bruno",
-    artwork: "https://picsum.photos/id/1/300/300",
-  },
-  {
-    id: "2",
-    title: "Midnight City",
-    artist: "Dreams",
-    artwork: "https://picsum.photos/id/10/300/300",
-  },
-  {
-    id: "3",
-    title: "Acoustic Vibe",
-    artist: "Sunny Morning",
-    artwork: "https://picsum.photos/id/20/300/300",
-  },
-  {
-    id: "4",
-    title: "Urban Jungle",
-    artist: "Street Beats",
-    artwork: "https://picsum.photos/id/35/300/300",
-  },
-];
+// Simulated Local Storage Data
+const LOCAL_FILES = Array.from({ length: 20 }).map((_, i) => ({
+  id: `${i}`,
+  title: `Local_Recording_0${i + 1}.mp3`,
+  artist: "Unknown Artist",
+  path: `https://archive.org/download/78_the-story-of-the-old-town_geovane-bruno_gb-records_6b8a8b/The%20Story%20of%20the%20Old%20Town%20-%20Geovane%20Bruno.mp3`,
+  size: "4.2 MB",
+  duration: "03:45",
+  date: "2 days ago",
+}));
 
-export default function LibraryScreen() {
+// Helper Component for the Top Grid
+const QuickAction = ({
+  icon,
+  label,
+}: {
+  icon: React.ReactNode;
+  label: string;
+}) => (
+  <TouchableOpacity style={styles.actionItem} activeOpacity={0.7}>
+    <View style={styles.actionIcon}>{icon}</View>
+    <Text style={styles.actionLabel}>{label}</Text>
+  </TouchableOpacity>
+);
+
+export default function LocalLibrary() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
+  const router = useRouter();
 
-  const topPadding = Platform.OS === "ios" ? insets.top + 20 : insets.top + 10;
-
-  const renderTrendingItem = (item: (typeof MOCK_SONGS)[0]) => (
-    <TouchableOpacity
-      key={item.id}
-      style={styles.trendingCard}
-      activeOpacity={0.8}
+  const renderFileItem = ({
+    item,
+    index,
+  }: {
+    item: (typeof LOCAL_FILES)[0];
+    index: number;
+  }) => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ delay: index * 50 }}
     >
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: item.artwork }} style={styles.trendingImage} />
-        <View style={styles.playButtonOverlay}>
-          <Play color="#fff" size={18} fill="#fff" />
+      <TouchableOpacity
+        style={styles.fileRow}
+        activeOpacity={0.7}
+        onPress={() => {
+          // Navigates to the player screen and passes song details
+          router.push({
+            pathname: "/player",
+            params: {
+              title: item.title,
+              artist: item.artist,
+              source: item.path,
+            },
+          });
+        }}
+      >
+        <View style={styles.iconContainer}>
+          <LinearGradient colors={["#222", "#111"]} style={styles.fileIconBase}>
+            <Music2 color="#FFA500" size={20} />
+          </LinearGradient>
         </View>
-      </View>
-      <Text style={styles.trendingTitle} numberOfLines={1}>
-        {item.title}
-      </Text>
-      <Text style={styles.trendingArtist}>{item.artist}</Text>
-    </TouchableOpacity>
-  );
 
-  const renderSongItem = ({ item }: { item: (typeof MOCK_SONGS)[0] }) => (
-    <TouchableOpacity style={styles.songRow} activeOpacity={0.7}>
-      <Image source={{ uri: item.artwork }} style={styles.thumbnail} />
-      <View style={styles.songInfo}>
-        <Text style={styles.songTitle} numberOfLines={1}>
-          {item.title}
-        </Text>
-        <Text style={styles.songArtist}>{item.artist}</Text>
-      </View>
-      <View style={styles.actionButtons}>
-        <TouchableOpacity hitSlop={10}>
-          <Heart color="#B3B3B3" size={20} style={{ marginRight: 16 }} />
+        <View style={styles.fileInfo}>
+          <Text style={styles.fileName} numberOfLines={1}>
+            {item.title}
+          </Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaText}>{item.size}</Text>
+            <View style={styles.dot} />
+            <Text style={styles.metaText}>{item.duration}</Text>
+            <View style={styles.dot} />
+            <Text style={styles.metaText}>{item.date}</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          hitSlop={15}
+          style={styles.moreBtn}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <MoreVertical color="#666" size={20} />
         </TouchableOpacity>
-        <TouchableOpacity hitSlop={10}>
-          <MoreHorizontal color="#B3B3B3" size={20} />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </MotiView>
   );
 
   return (
     <View style={styles.container}>
+      {/* Sticky Header Section */}
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <Text style={styles.mainTitle}>My Files</Text>
+
+        <BlurView intensity={20} tint="dark" style={styles.searchContainer}>
+          <Search color="#888" size={18} style={{ marginLeft: 12 }} />
+          <TextInput
+            placeholder="Search local music..."
+            placeholderTextColor="#666"
+            style={styles.searchInput}
+          />
+        </BlurView>
+
+        <View style={styles.quickActions}>
+          <QuickAction
+            icon={<FolderDown size={22} color="#fff" />}
+            label="Downloads"
+          />
+          <QuickAction icon={<Clock size={22} color="#fff" />} label="Recent" />
+          <QuickAction
+            icon={<ListMusic size={22} color="#fff" />}
+            label="Folders"
+          />
+        </View>
+      </View>
+
+      {/* Scrollable List Section */}
       <FlatList
-        data={MOCK_SONGS}
+        data={LOCAL_FILES}
         keyExtractor={(item) => item.id}
-        renderItem={renderSongItem}
+        renderItem={renderFileItem}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom + 100 },
+        ]}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={() => (
-          <View style={{ paddingTop: topPadding }}>
-            <Text style={styles.mainTitle}>Feed</Text>
-
-            <Text style={styles.sectionTitle}>Trending Now</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.horizontalScroll}
-              decelerationRate="fast"
-              snapToInterval={168} // Card width + margin
-            >
-              {MOCK_SONGS.map(renderTrendingItem)}
-            </ScrollView>
-
-            <View style={styles.listHeaderRow}>
-              <Text style={styles.sectionTitle}>Recently Added</Text>
-              <TouchableOpacity>
-                <Text style={styles.viewAll}>View All</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingBottom: tabBarHeight + 40,
-        }}
+        ListHeaderComponent={
+          <Text style={styles.listLabel}>All Audio Files</Text>
+        }
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
+  container: {
+    flex: 1,
+    backgroundColor: "#050505",
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    backgroundColor: "#050505",
+  },
   mainTitle: {
-    fontFamily: "Poppins-Black",
-    fontSize: 36,
-    color: "#FFA500",
-    marginBottom: 20,
-    letterSpacing: -1.5,
-  },
-  sectionTitle: {
-    fontFamily: "Poppins-Bold",
-    fontSize: 22,
+    fontSize: 34,
+    fontWeight: "900",
     color: "#fff",
+    letterSpacing: -1,
     marginBottom: 15,
-    letterSpacing: -0.5,
   },
-  horizontalScroll: { marginBottom: 30 },
-  trendingCard: { width: 150, marginRight: 18 },
-  imageContainer: { position: "relative", marginBottom: 10 },
-  trendingImage: {
-    width: 150,
-    height: 150,
-    borderRadius: 20,
-    backgroundColor: "#1A1A1A",
-  },
-  playButtonOverlay: {
-    position: "absolute",
-    bottom: 12,
-    right: 12,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
+  searchContainer: {
+    height: 50,
+    borderRadius: 15,
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(255,255,255,0.08)",
+    overflow: "hidden",
   },
-  trendingTitle: {
-    fontFamily: "Poppins-Bold",
-    color: "#fff",
-    fontSize: 15,
-    marginTop: 2,
-  },
-  trendingArtist: {
-    fontFamily: "Poppins-Regular",
-    color: "#8E8E93",
-    fontSize: 13,
-  },
-  listHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  viewAll: {
-    fontFamily: "Poppins-Bold",
-    color: "#FFA500",
-    fontSize: 14,
-  },
-  songRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  thumbnail: { width: 58, height: 58, borderRadius: 10 },
-  songInfo: { flex: 1, marginLeft: 16 },
-  songTitle: {
-    fontFamily: "Poppins-Bold",
+  searchInput: {
+    flex: 1,
     color: "#fff",
     fontSize: 16,
+    paddingHorizontal: 10,
   },
-  songArtist: {
-    fontFamily: "Poppins-Regular",
-    color: "#8E8E93",
-    fontSize: 14,
-    marginTop: 2,
+  quickActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 25,
   },
-  actionButtons: {
+  actionItem: {
+    alignItems: "center",
+    width: "30%",
+  },
+  actionIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,165,0,0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,165,0,0.1)",
+  },
+  actionLabel: {
+    color: "#999",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  listContent: {
+    paddingHorizontal: 20,
+  },
+  listLabel: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  fileRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginLeft: 10,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    padding: 14,
+    borderRadius: 18,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.02)",
+  },
+  iconContainer: {
+    marginRight: 15,
+  },
+  fileIconBase: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  fileInfo: {
+    flex: 1,
+  },
+  fileName: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 5,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  metaText: {
+    color: "#666",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  dot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: "#333",
+    marginHorizontal: 8,
+  },
+  moreBtn: {
+    padding: 5,
   },
 });
