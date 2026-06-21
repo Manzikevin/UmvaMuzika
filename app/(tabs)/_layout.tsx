@@ -12,9 +12,9 @@ export default function TabLayout() {
         headerShown: false,
 
         // 2. Styling the Tab Bar for responsiveness and a modern minimal look
-        tabBarActiveTintColor: "#FFA500", // Audiomack Orange
+        tabBarActiveTintColor: "#0ba000",
         tabBarInactiveTintColor: "#8E8E93",
-        tabBarShowLabel: false, // Modern minimal look (icons only)
+        tabBarShowLabel: false,
         tabBarStyle: {
           position: "absolute",
           borderTopWidth: 0,
@@ -36,7 +36,6 @@ export default function TabLayout() {
       }}
     >
       {/* Main Library / Home Screen 
-        Ensure your file inside app/(tabs)/index.tsx manages the listing.
       */}
       <Tabs.Screen
         name="index"

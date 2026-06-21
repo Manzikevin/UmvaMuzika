@@ -4,25 +4,25 @@
     "slug": "UmvaMuzika",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/umva.png",
     "scheme": "umvamuzika",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/umva.png",
       "resizeMode": "contain",
       "backgroundColor": "#050505"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.codeharness.umvamuzika",
+      "bundleIdentifier": "org.adsfree.umvamuzika",
       "infoPlist": {
         "NSAppleMusicUsageDescription": "This app needs access to your library to play your offline tracks.",
         "UIBackgroundModes": ["audio"]
       }
     },
     "android": {
-      "package": "com.codeharness.umvamuzika",
+      "package": "org.adsfree.umvamuzika",
       "permissions": [
         "READ_EXTERNAL_STORAGE",
         "READ_MEDIA_AUDIO",
@@ -32,7 +32,7 @@
         "WAKE_LOCK"
       ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/umva.png",
         "backgroundColor": "#050505"
       },
       "edgeToEdgeEnabled": true
@@ -51,7 +51,7 @@
       [
         "expo-audio",
         {
-          "stayAwake": true
+          "enableBackgroundPlayback": true
         }
       ],
       "expo-font"

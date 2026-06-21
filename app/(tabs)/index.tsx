@@ -98,7 +98,7 @@ export default function LocalLibrary() {
 
       {loading ? (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#FFA500" />
+          <ActivityIndicator size="large" color="#3dd700" />
         </View>
       ) : (
         <FlatList
@@ -118,7 +118,7 @@ export default function LocalLibrary() {
               }}
             >
               <View style={styles.fileIconBase}>
-                <Music2 color="#FFA500" size={20} />
+                <Music2 color="#0ba000" size={20} />
               </View>
               <View style={styles.fileInfo}>
                 <Text style={styles.fileName} numberOfLines={1}>

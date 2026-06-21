@@ -1,8 +1,15 @@
 // src/context/AudioContext.tsx
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+} from "react";
 import {
   createAudioPlayer,
   useAudioPlayerStatus,
+  setAudioModeAsync,
   AudioPlayer,
 } from "expo-audio";
 
@@ -26,8 +33,11 @@ interface AudioContextType {
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
+// Default placeholder cover art for system notification display
+const DEFAULT_COVER =
+  "https://res.cloudinary.com/duhvufmjp/image/upload/v1782063912/umva_whibml.png";
+
 // Instantiate ONE single persistent player outside the react life-cycle
-// so minimizing or changing components never tears down the audio instance.
 const globalAudioInstance = createAudioPlayer("");
 
 export function AudioProvider({ children }: { children: React.ReactNode }) {
@@ -35,15 +45,69 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [playlist, setPlaylist] = useState<AudioTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
 
+  // Tracks whether we've already activated lock screen controls,
+  // so subsequent track changes use the lighter "update" call.
+  const lockScreenActiveRef = useRef(false);
+
+  // Configure the audio session ONCE so playback survives backgrounding/locking.
+  useEffect(() => {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: "doNotMix", // required for setActiveForLockScreen to work reliably
+    }).catch((err) => console.warn("Failed to set audio mode:", err));
+
+    // Release lock screen / notification controls when the provider unmounts.
+    // Wrapped in try/catch: on a cold close/reopen the native module may not
+    // have anything active yet, and calling this in that state can throw
+    // instead of safely no-op-ing.
+    return () => {
+      try {
+        if (lockScreenActiveRef.current) {
+          globalAudioInstance.clearLockScreenControls();
+        }
+      } catch (err) {
+        console.warn("clearLockScreenControls failed (safe to ignore):", err);
+      } finally {
+        lockScreenActiveRef.current = false;
+      }
+    };
+  }, []);
+
   // Link status updates reactively to our single persistent player
   const status = useAudioPlayerStatus(globalAudioInstance);
 
-  // Auto-skip logic when the current audio track completes
+  // Auto-skip logic when the current audio track completes naturally
   useEffect(() => {
     if (status.didJustFinish && playlist.length > 0) {
       playNext();
     }
   }, [status.didJustFinish, playlist.length]);
+
+
+  const updateSystemControlsNotification = (track: AudioTrack) => {
+    const metadata = {
+      title: track.title || "Unknown Title",
+      artist: track.artist || "UmvaMuzika",
+      albumTitle: "Local Storage",
+      artworkUrl: DEFAULT_COVER,
+    };
+
+    try {
+      if (!lockScreenActiveRef.current) {
+        globalAudioInstance.setActiveForLockScreen(true, metadata, {
+          showSeekForward: true,
+          showSeekBackward: true,
+        });
+        lockScreenActiveRef.current = true;
+      } else {
+        globalAudioInstance.updateLockScreenMetadata(metadata);
+      }
+    } catch (err) {
+      console.warn("Lock screen metadata update failed:", err);
+      lockScreenActiveRef.current = false;
+    }
+  };
 
   const playTrack = (track: AudioTrack, newPlaylist?: AudioTrack[]) => {
     if (newPlaylist && newPlaylist.length > 0) {
@@ -57,9 +121,10 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
     setCurrentTrack(track);
 
-    // Explicitly update our single master native engine instance
     globalAudioInstance.replace(track.uri);
     globalAudioInstance.play();
+
+    updateSystemControlsNotification(track);
   };
 
   const playNext = () => {
@@ -73,6 +138,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       globalAudioInstance.replace(nextTrack.uri);
       globalAudioInstance.play();
 
+      updateSystemControlsNotification(nextTrack);
       return nextIndex;
     });
   };
@@ -94,6 +160,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       globalAudioInstance.replace(prevTrack.uri);
       globalAudioInstance.play();
 
+      updateSystemControlsNotification(prevTrack);
       return prevIndexCalculated;
     });
   };

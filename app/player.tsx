@@ -27,7 +27,7 @@ import { useAudio } from "../src/context/AudioContext";
 
 const { height } = Dimensions.get("window");
 const DEFAULT_COVER =
-  "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=1200&auto=format&fit=crop";
+  "https://res.cloudinary.com/duhvufmjp/image/upload/v1782063912/umva_whibml.png";
 
 export default function ModernPlayer() {
   const insets = useSafeAreaInsets();
@@ -122,9 +122,9 @@ export default function ModernPlayer() {
             minimumValue={0}
             maximumValue={status.duration || 1}
             value={status.currentTime || 0}
-            minimumTrackTintColor="#FFA500"
+            minimumTrackTintColor="#0ba000"
             maximumTrackTintColor="rgba(255,255,255,0.2)"
-            thumbTintColor="#FFA500"
+            thumbTintColor="#1e810088"
             // Updates current position smoothly on slide complete
             onSlidingComplete={(value) => {
               player?.seekTo(value);
@@ -152,14 +152,14 @@ export default function ModernPlayer() {
           >
             <View style={styles.playButtonInside}>
               {status.isBuffering ? (
-                <ActivityIndicator color="#000" />
+                <ActivityIndicator color="#fff" />
               ) : isPlaying ? (
-                <Pause size={30} color="#000" fill="#000" />
+                <Pause size={30} color="#fff" fill="#fff" />
               ) : (
                 <Play
                   size={30}
-                  color="#000"
-                  fill="#000"
+                  color="#fff"
+                  fill="#fff"
                   style={{ marginLeft: 4 }}
                 />
               )}
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: "#fff",
+    backgroundColor: "#0ba000",
     justifyContent: "center",
     alignItems: "center",
   },
