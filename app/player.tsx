@@ -12,70 +12,57 @@ import {
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-import { useLocalSearchParams, useRouter } from "expo-router"; // Added router hooks
+import { useAudioPlayerStatus } from "expo-audio";
+import { useRouter } from "expo-router";
 import { MotiView } from "moti";
+import Slider from "@react-native-community/slider"; // Standard high-performance gesture tracking slider
 import {
   Play,
   Pause,
   SkipBack,
   SkipForward,
-  Repeat,
-  Shuffle,
-  Heart,
-  ListMusic,
   ChevronDown,
-  Volume2,
 } from "lucide-react-native";
+import { useAudio } from "../src/context/AudioContext";
 
-const { width } = Dimensions.get("window");
-
-// Default fallback cover for local files without art
+const { height } = Dimensions.get("window");
 const DEFAULT_COVER =
   "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=1200&auto=format&fit=crop";
 
 export default function ModernPlayer() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { player, currentTrack, isPlaying, playNext, playPrevious } =
+    useAudio();
 
-  // 1. Grab the data passed from the Library Screen
-  const { title, artist, source, cover } = useLocalSearchParams<{
-    title: string;
-    artist: string;
-    source: string;
-    cover?: string;
-  }>();
+  // Observe global audio player runtime hooks seamlessly
+  const status = useAudioPlayerStatus(player!);
 
-  // 2. Initialize player with the dynamic source
-  const player = useAudioPlayer(source || "");
-  const status = useAudioPlayerStatus(player);
-
-  const progress = useMemo(() => {
-    if (!status.duration || status.duration <= 0) return 0;
-    return (status.currentTime / status.duration) * 100;
-  }, [status.currentTime, status.duration]);
-
-  const togglePlayback = () =>
-    status.playing ? player.pause() : player.play();
-
-  const formatTime = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
+  // Fix: formatTime expects seconds because expo-audio outputs currentTime and duration in seconds
+  const formatTime = (secondsTotal: number) => {
+    if (isNaN(secondsTotal) || secondsTotal <= 0) return "0:00";
+    const minutes = Math.floor(secondsTotal / 60);
+    const seconds = Math.floor(secondsTotal % 60);
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
+
+  if (!currentTrack) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={{ color: "#fff" }}>No Track Selected</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-
-      {/* Dynamic Background */}
       <ImageBackground
-        source={{ uri: cover || DEFAULT_COVER }}
+        source={{ uri: DEFAULT_COVER }}
         style={StyleSheet.absoluteFillObject}
       >
         <BlurView
-          intensity={80}
+          intensity={90}
           tint="dark"
           style={StyleSheet.absoluteFillObject}
         />
@@ -88,10 +75,10 @@ export default function ModernPlayer() {
       <View
         style={[
           styles.content,
-          { paddingTop: insets.top, paddingBottom: insets.bottom + 20 },
+          { paddingTop: insets.top, paddingBottom: insets.bottom + 15 },
         ]}
       >
-        {/* Header Navigation */}
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.glassBtn}
@@ -100,57 +87,49 @@ export default function ModernPlayer() {
             <ChevronDown color="#fff" size={24} />
           </TouchableOpacity>
           <View style={styles.headerTitle}>
-            <Text style={styles.nowPlayingText}>PLAYING LOCAL FILE</Text>
-            <Text style={styles.albumText} numberOfLines={1}>
-              {title || "Unknown Track"}
-            </Text>
+            <Text style={styles.nowPlayingText}>NOW PLAYING</Text>
           </View>
-          <TouchableOpacity style={styles.glassBtn}>
-            <ListMusic color="#fff" size={24} />
-          </TouchableOpacity>
+          <View style={{ width: 45 }} />
         </View>
 
-        {/* Floating Artwork */}
+        {/* Album Artwork */}
         <MotiView
-          animate={{ scale: status.playing ? 1 : 0.92, opacity: 1 }}
-          transition={{ type: "timing", duration: 500 }}
+          animate={{ scale: isPlaying ? 1 : 0.94 }}
+          transition={{ type: "timing", duration: 400 }}
           style={styles.artContainer}
         >
           <ImageBackground
-            source={{ uri: cover || DEFAULT_COVER }}
+            source={{ uri: DEFAULT_COVER }}
             style={styles.artwork}
-            imageStyle={{ borderRadius: 40 }}
-          >
-            <LinearGradient
-              colors={["rgba(0,0,0,0.2)", "transparent"]}
-              style={StyleSheet.absoluteFillObject}
-            />
-          </ImageBackground>
+            imageStyle={{ borderRadius: 24 }}
+          />
         </MotiView>
 
-        {/* Title & Favorite */}
+        {/* Metadata */}
         <View style={styles.metaRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.titleText} numberOfLines={1}>
-              {title || "Unknown Title"}
-            </Text>
-            <Text style={styles.artistText} numberOfLines={1}>
-              {artist || "Unknown Artist"}
-            </Text>
-          </View>
-          <TouchableOpacity style={styles.heartCircle}>
-            <Heart size={24} color="#fff" strokeWidth={2.5} />
-          </TouchableOpacity>
+          <Text style={styles.titleText} numberOfLines={1}>
+            {currentTrack.title || "Unknown Title"}
+          </Text>
+          <Text style={styles.artistText} numberOfLines={1}>
+            {currentTrack.artist || "Unknown Artist"}
+          </Text>
         </View>
 
-        {/* Progress Bar */}
+        {/* Interactive Progress Seeker */}
         <View style={styles.progressWrapper}>
-          <View style={styles.trackBase}>
-            <MotiView
-              animate={{ width: `${progress}%` }}
-              style={styles.trackFill}
-            />
-          </View>
+          <Slider
+            style={styles.slider}
+            minimumValue={0}
+            maximumValue={status.duration || 1}
+            value={status.currentTime || 0}
+            minimumTrackTintColor="#FFA500"
+            maximumTrackTintColor="rgba(255,255,255,0.2)"
+            thumbTintColor="#FFA500"
+            // Updates current position smoothly on slide complete
+            onSlidingComplete={(value) => {
+              player?.seekTo(value);
+            }}
+          />
           <View style={styles.timeLabels}>
             <Text style={styles.timeText}>
               {formatTime(status.currentTime)}
@@ -159,66 +138,38 @@ export default function ModernPlayer() {
           </View>
         </View>
 
-        {/* Controls */}
+        {/* Media Control System */}
         <View style={styles.controlsRow}>
-          <TouchableOpacity>
-            <Shuffle size={20} color="rgba(255,255,255,0.5)" />
+          {/* True Song Skipping Backwards */}
+          <TouchableOpacity onPress={playPrevious}>
+            <SkipBack size={32} color="#fff" fill="#fff" />
           </TouchableOpacity>
 
-          <View style={styles.mainControls}>
-            <TouchableOpacity
-              onPress={() =>
-                player.seekTo(Math.max(0, status.currentTime - 10000))
-              }
-            >
-              <SkipBack size={32} color="#fff" fill="#fff" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={togglePlayback}
-              style={styles.playContainer}
-            >
-              <LinearGradient
-                colors={["#fff", "#e0e0e0"]}
-                style={styles.playGradient}
-              >
-                {status.isBuffering ? (
-                  <ActivityIndicator color="#000" />
-                ) : status.playing ? (
-                  <Pause size={32} color="#000" fill="#000" />
-                ) : (
-                  <Play
-                    size={32}
-                    color="#000"
-                    fill="#000"
-                    style={{ marginLeft: 4 }}
-                  />
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() =>
-                player.seekTo(
-                  Math.min(status.duration, status.currentTime + 10000),
-                )
-              }
-            >
-              <SkipForward size={32} color="#fff" fill="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity>
-            <Repeat size={20} color="rgba(255,255,255,0.5)" />
+          {/* Toggle Action Center */}
+          <TouchableOpacity
+            onPress={() => (isPlaying ? player?.pause() : player?.play())}
+            style={styles.playContainer}
+          >
+            <View style={styles.playButtonInside}>
+              {status.isBuffering ? (
+                <ActivityIndicator color="#000" />
+              ) : isPlaying ? (
+                <Pause size={30} color="#000" fill="#000" />
+              ) : (
+                <Play
+                  size={30}
+                  color="#000"
+                  fill="#000"
+                  style={{ marginLeft: 4 }}
+                />
+              )}
+            </View>
           </TouchableOpacity>
-        </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <View style={styles.devicePicker}>
-            <Volume2 size={16} color="#FFA500" />
-            <Text style={styles.deviceText}>Phone Speaker</Text>
-          </View>
+          {/* True Song Skipping Forwards */}
+          <TouchableOpacity onPress={playNext}>
+            <SkipForward size={32} color="#fff" fill="#fff" />
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -227,7 +178,8 @@ export default function ModernPlayer() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
-  content: { flex: 1, justifyContent: "space-between", paddingHorizontal: 25 },
+  centered: { justifyContent: "center", alignItems: "center" },
+  content: { flex: 1, justifyContent: "space-between", paddingHorizontal: 24 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -236,95 +188,53 @@ const styles = StyleSheet.create({
   glassBtn: {
     width: 45,
     height: 45,
-    borderRadius: 15,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.1)",
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: { alignItems: "center", flex: 1, marginHorizontal: 10 },
+  headerTitle: { alignItems: "center", flex: 1 },
   nowPlayingText: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 10,
-    fontWeight: "800",
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 11,
+    fontWeight: "700",
     letterSpacing: 1,
   },
-  albumText: { color: "#fff", fontSize: 14, fontWeight: "600" },
   artContainer: {
     width: "100%",
     aspectRatio: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.5,
-    shadowRadius: 30,
-    elevation: 20,
+    alignSelf: "center",
+    marginVertical: height > 700 ? 20 : 10,
   },
   artwork: { flex: 1 },
-  metaRow: { flexDirection: "row", alignItems: "center", marginTop: 20 },
+  metaRow: { alignItems: "flex-start" },
   titleText: {
     color: "#fff",
-    fontSize: 26,
-    fontWeight: "900",
-    letterSpacing: -0.5,
+    fontSize: height > 700 ? 24 : 20,
+    fontWeight: "800",
   },
-  artistText: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 18,
-    fontWeight: "500",
-  },
-  heartCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  progressWrapper: { marginTop: 20 },
-  trackBase: {
-    height: 6,
-    width: "100%",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 3,
-  },
-  trackFill: { height: "100%", backgroundColor: "#fff", borderRadius: 3 },
+  artistText: { color: "rgba(255,255,255,0.5)", fontSize: 16, marginTop: 4 },
+  progressWrapper: { marginVertical: 10, width: "100%" },
+  slider: { width: "100%", height: 40 },
   timeLabels: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 10,
+    paddingHorizontal: 5,
   },
-  timeText: { color: "rgba(255,255,255,0.4)", fontSize: 12, fontWeight: "600" },
+  timeText: { color: "rgba(255,255,255,0.4)", fontSize: 12 },
   controlsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space-evenly",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 20,
   },
-  mainControls: { flexDirection: "row", alignItems: "center", gap: 30 },
   playContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    elevation: 10,
-    shadowColor: "#fff",
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-  },
-  playGradient: {
-    flex: 1,
-    borderRadius: 40,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
   },
-  footer: { alignItems: "center" },
-  devicePicker: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "rgba(255,255,255,0.05)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  deviceText: { color: "#FFA500", fontWeight: "700", fontSize: 12 },
+  playButtonInside: { justifyContent: "center", alignItems: "center" },
 });

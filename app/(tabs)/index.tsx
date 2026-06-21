@@ -1,3 +1,4 @@
+// app/index.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -8,22 +9,15 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Dimensions,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as MediaLibrary from "expo-media-library";
-import {
-  Search,
-  FolderDown,
-  Music2,
-  Clock,
-  ListMusic,
-  MoreVertical,
-} from "lucide-react-native";
+import { Search, Music2 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
-import { MotiView } from "moti";
-import { requestMediaLibraryPermissions } from "../../src/utils/permissions";
+import { useAudio } from "../../src/context/AudioContext";
+
+const { width } = Dimensions.get("window");
 
 interface AudioFile {
   id: string;
@@ -31,25 +25,12 @@ interface AudioFile {
   artist: string;
   uri: string;
   duration: number;
-  size?: number;
 }
-
-const QuickAction = ({
-  icon,
-  label,
-}: {
-  icon: React.ReactNode;
-  label: string;
-}) => (
-  <TouchableOpacity style={styles.actionItem} activeOpacity={0.7}>
-    <View style={styles.actionIcon}>{icon}</View>
-    <Text style={styles.actionLabel}>{label}</Text>
-  </TouchableOpacity>
-);
 
 export default function LocalLibrary() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { playTrack } = useAudio();
 
   const [loading, setLoading] = useState(true);
   const [songs, setSongs] = useState<AudioFile[]>([]);
@@ -61,35 +42,35 @@ export default function LocalLibrary() {
 
   const loadLocalMusic = async () => {
     setLoading(true);
-    const hasPermission = await requestMediaLibraryPermissions();
+    const { status } = await MediaLibrary.requestPermissionsAsync();
 
-    if (!hasPermission) {
+    if (status !== "granted") {
       Alert.alert(
         "Permission Required",
-        "Please allow access to your media library to play local music.",
+        "Please allow media access to scan system folders.",
       );
       setLoading(false);
       return;
     }
 
     try {
-      // Fetch audio assets from local storage
       const media = await MediaLibrary.getAssetsAsync({
         mediaType: "audio",
+        first: 1000,
         sortBy: [[MediaLibrary.SortBy.creationTime, false]],
       });
 
       const formattedSongs = media.assets.map((asset) => ({
         id: asset.id,
-        title: asset.filename,
-        artist: "Local Storage",
+        title: asset.filename.replace(/\.[^/.]+$/, ""),
+        artist: "Unknown Album / Folder",
         uri: asset.uri,
         duration: asset.duration,
       }));
 
       setSongs(formattedSongs);
     } catch (error) {
-      console.error("Error loading music:", error);
+      console.error("Storage Indexing Error:", error);
     } finally {
       setLoading(false);
     }
@@ -99,87 +80,18 @@ export default function LocalLibrary() {
     song.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  };
-
-  const renderFileItem = ({
-    item,
-    index,
-  }: {
-    item: AudioFile;
-    index: number;
-  }) => (
-    <MotiView
-      from={{ opacity: 0, translateY: 10 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ delay: index * 30 }}
-    >
-      <TouchableOpacity
-        style={styles.fileRow}
-        activeOpacity={0.7}
-        onPress={() => {
-          router.push({
-            pathname: "/player",
-            params: {
-              title: item.title,
-              artist: item.artist,
-              source: item.uri, // Passing the actual local file URI
-            },
-          });
-        }}
-      >
-        <View style={styles.iconContainer}>
-          <LinearGradient colors={["#222", "#111"]} style={styles.fileIconBase}>
-            <Music2 color="#FFA500" size={20} />
-          </LinearGradient>
-        </View>
-
-        <View style={styles.fileInfo}>
-          <Text style={styles.fileName} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaText}>Audio</Text>
-            <View style={styles.dot} />
-            <Text style={styles.metaText}>{formatDuration(item.duration)}</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity hitSlop={15} style={styles.moreBtn}>
-          <MoreVertical color="#666" size={20} />
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </MotiView>
-  );
-
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.mainTitle}>My Files</Text>
-
-        <BlurView intensity={20} tint="dark" style={styles.searchContainer}>
+        <View style={styles.searchContainer}>
           <Search color="#888" size={18} style={{ marginLeft: 12 }} />
           <TextInput
-            placeholder="Search local music..."
+            placeholder="Search all local files..."
             placeholderTextColor="#666"
             style={styles.searchInput}
             value={searchQuery}
             onChangeText={setSearchQuery}
-          />
-        </BlurView>
-
-        <View style={styles.quickActions}>
-          <QuickAction
-            icon={<FolderDown size={22} color="#fff" />}
-            label="Downloads"
-          />
-          <QuickAction icon={<Clock size={22} color="#fff" />} label="Recent" />
-          <QuickAction
-            icon={<ListMusic size={22} color="#fff" />}
-            label="Folders"
           />
         </View>
       </View>
@@ -187,28 +99,35 @@ export default function LocalLibrary() {
       {loading ? (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color="#FFA500" />
-          <Text style={styles.loaderText}>Scanning storage...</Text>
         </View>
       ) : (
         <FlatList
           data={filteredSongs}
           keyExtractor={(item) => item.id}
-          renderItem={renderFileItem}
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: insets.bottom + 120 },
+            { paddingBottom: insets.bottom + 140 },
           ]}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <Text style={styles.listLabel}>
-              {filteredSongs.length} Audio Files Found
-            </Text>
-          }
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>
-              No music files found on this device.
-            </Text>
-          }
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.fileRow}
+              onPress={() => {
+                // Pass the single item alongside the matching array to instantiate the play context queue cleanly
+                playTrack(item, filteredSongs);
+                router.push("/player");
+              }}
+            >
+              <View style={styles.fileIconBase}>
+                <Music2 color="#FFA500" size={20} />
+              </View>
+              <View style={styles.fileInfo}>
+                <Text style={styles.fileName} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.metaText}>Audio File</Text>
+              </View>
+            </TouchableOpacity>
+          )}
         />
       )}
     </View>
@@ -217,91 +136,41 @@ export default function LocalLibrary() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#050505" },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: "#050505",
-  },
+  header: { paddingHorizontal: 20, paddingBottom: 15 },
   mainTitle: {
-    fontSize: 34,
+    fontSize: width > 400 ? 34 : 28,
     fontWeight: "900",
     color: "#fff",
-    letterSpacing: -1,
     marginBottom: 15,
   },
   searchContainer: {
-    height: 50,
-    borderRadius: 15,
+    height: 48,
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.05)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
-  searchInput: { flex: 1, color: "#fff", fontSize: 16, paddingHorizontal: 10 },
-  quickActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 25,
-  },
-  actionItem: { alignItems: "center", width: "30%" },
-  actionIcon: {
-    width: 58,
-    height: 58,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,165,0,0.12)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,165,0,0.1)",
-  },
-  actionLabel: { color: "#999", fontSize: 12, fontWeight: "600" },
+  searchInput: { flex: 1, color: "#fff", paddingHorizontal: 10 },
   listContent: { paddingHorizontal: 20 },
-  listLabel: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 10,
-    marginBottom: 20,
-  },
   fileRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.03)",
-    padding: 14,
-    borderRadius: 18,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.02)",
-  },
-  iconContainer: { marginRight: 15 },
-  fileIconBase: {
-    width: 50,
-    height: 50,
+    backgroundColor: "rgba(255,255,255,0.02)",
+    padding: 12,
     borderRadius: 14,
+    marginBottom: 10,
+  },
+  fileIconBase: {
+    width: 45,
+    height: 45,
+    borderRadius: 10,
+    backgroundColor: "#111",
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 15,
   },
   fileInfo: { flex: 1 },
-  fileName: { color: "#fff", fontSize: 15, fontWeight: "700", marginBottom: 5 },
-  metaRow: { flexDirection: "row", alignItems: "center" },
-  metaText: { color: "#666", fontSize: 12, fontWeight: "500" },
-  dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: "#333",
-    marginHorizontal: 8,
-  },
-  moreBtn: { padding: 5 },
+  fileName: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  metaText: { color: "#666", fontSize: 12, marginTop: 2 },
   loaderContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loaderText: { color: "#666", marginTop: 10, fontWeight: "600" },
-  emptyText: {
-    color: "#444",
-    textAlign: "center",
-    marginTop: 50,
-    fontSize: 16,
-  },
 });
