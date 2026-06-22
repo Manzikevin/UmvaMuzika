@@ -7,12 +7,6 @@
     "icon": "./assets/images/umva.png",
     "scheme": "umvamuzika",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/umva.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#050505"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "org.adsfree.umvamuzika",
@@ -34,8 +28,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/umva.png",
         "backgroundColor": "#050505"
-      },
-      "edgeToEdgeEnabled": true
+      }
     },
     "plugins": [
       "expo-router",
@@ -54,7 +47,12 @@
           "enableBackgroundPlayback": true
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-splash-screen",
+      "expo-sqlite",
+      "expo-status-bar",
+      "expo-web-browser",
+      "expo-asset"
     ],
     "extra": {
       "eas": {

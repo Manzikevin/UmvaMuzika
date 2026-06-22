@@ -59,16 +59,12 @@ export default function ModernPlayer() {
       <StatusBar barStyle="light-content" />
       <ImageBackground
         source={{ uri: DEFAULT_COVER }}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
       >
-        <BlurView
-          intensity={90}
-          tint="dark"
-          style={StyleSheet.absoluteFillObject}
-        />
+        <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
         <LinearGradient
           colors={["transparent", "rgba(0,0,0,0.8)", "#000"]}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
       </ImageBackground>
 
@@ -124,7 +120,7 @@ export default function ModernPlayer() {
             value={status.currentTime || 0}
             minimumTrackTintColor="#0ba000"
             maximumTrackTintColor="rgba(255,255,255,0.2)"
-            thumbTintColor="#1e810088"
+            thumbTintColor="#0ba000"
             // Updates current position smoothly on slide complete
             onSlidingComplete={(value) => {
               player?.seekTo(value);

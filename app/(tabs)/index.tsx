@@ -57,12 +57,15 @@ export default function LocalLibrary() {
       const media = await MediaLibrary.getAssetsAsync({
         mediaType: "audio",
         first: 1000,
-        sortBy: [[MediaLibrary.SortBy.creationTime, false]],
+        // Fix: Updated to match modern expo-media-library layout spec mapping
+        sortBy: ["creationTime"],
       });
 
       const formattedSongs = media.assets.map((asset) => ({
         id: asset.id,
-        title: asset.filename.replace(/\.[^/.]+$/, ""),
+        title: asset.filename
+          ? asset.filename.replace(/\.[^/.]+$/, "")
+          : "Unknown Track",
         artist: "Unknown Album / Folder",
         uri: asset.uri,
         duration: asset.duration,
